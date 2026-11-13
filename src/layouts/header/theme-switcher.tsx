@@ -1,12 +1,10 @@
-import { ThemeToggler, type ThemeSelection } from '@animate-ui/react/primitives/effects/theme-toggler'
-import { Monitor, Moon, Sun } from 'lucide-react'
+import { ThemeToggler } from '@animate-ui/react/primitives/effects/theme-toggler'
+import { Moon, Sun } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { usePreferencesStore } from '@/stores/preferences/preferences-provider'
-
-const THEME_CYCLE: readonly ThemeSelection[] = ['light', 'dark', 'system']
 
 export function ThemeSwitcher({ showTooltip = true }: { readonly showTooltip?: boolean }) {
   const { themeMode, resolvedThemeMode, setPreference } = usePreferencesStore(
@@ -23,21 +21,14 @@ export function ThemeSwitcher({ showTooltip = true }: { readonly showTooltip?: b
       resolvedTheme={resolvedThemeMode}
       setTheme={mode => setPreference('theme_mode', mode)}
     >
-      {({ effective, resolved, toggleTheme }) => {
-        const nextTheme = THEME_CYCLE[(THEME_CYCLE.indexOf(effective) + 1) % THEME_CYCLE.length]
-
-        const changeTheme = () => {
-          if (nextTheme !== 'system' && nextTheme === resolved) {
-            setPreference('theme_mode', nextTheme)
-            return
-          }
-
-          toggleTheme(nextTheme)
-        }
-
+      {({ resolved, toggleTheme }) => {
         const trigger = (
-          <Button variant="outline" size="icon-sm" onClick={changeTheme}>
-            {effective === 'system' ? <Monitor /> : resolved === 'dark' ? <Sun /> : <Moon />}
+          <Button
+            variant="outline"
+            size="icon-sm"
+            onClick={() => toggleTheme(resolved === 'dark' ? 'light' : 'dark')}
+          >
+            {resolved === 'dark' ? <Sun /> : <Moon />}
             {showTooltip ? null : <span className="sr-only">切换主题</span>}
           </Button>
         )
