@@ -95,7 +95,7 @@ export function SearchTrigger() {
       搜索
       {shortcut && (
         <kbd className="inline-flex h-5 items-center gap-1 rounded border bg-muted px-1.5 text-[10px] font-medium select-none">
-          <span className="text-xs">⌘</span>K
+          <span className="text-xs">⌘</span>J
         </kbd>
       )}
     </Button>

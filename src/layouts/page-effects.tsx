@@ -98,7 +98,7 @@ export function GlobalShortcuts() {
   })
 
   useKeyPress(
-    ['ctrl.k', 'meta.k'],
+    ['ctrl.j', 'meta.j'],
     event => {
       event.preventDefault()
       const { searchOpen, setSearchOpen } = useShellStore.getState()

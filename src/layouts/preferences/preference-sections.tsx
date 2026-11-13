@@ -196,7 +196,7 @@ export function ShortcutPreferences() {
   return (
     <PreferenceBlock title="全局">
       <PreferenceSwitch field="shortcut_enable" label="快捷键" />
-      <PreferenceSwitch field="shortcut_search" label="全局搜索" hint="Ctrl / ⌘ + K" disabled={!enabled} />
+      <PreferenceSwitch field="shortcut_search" label="全局搜索" hint="Ctrl / ⌘ + J" disabled={!enabled} />
       <PreferenceSwitch field="shortcut_logout" label="退出登录" hint="Alt + Q" disabled={!enabled} />
       <PreferenceSwitch field="shortcut_lock_screen" label="锁定屏幕" hint="Alt + L" disabled={!enabled} />
       <PreferenceSwitch field="shortcut_escape" label="Esc 退出最大化" hint="Esc" disabled={!enabled} />
