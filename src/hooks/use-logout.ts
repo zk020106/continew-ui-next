@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 
 import { endSession } from '@/lib/end-session'
+import { LOCK_SCREEN_KEY } from '@/lib/constants'
 import { useAuthStore } from '@/stores/auth/auth-provider'
 import { useTabsStore } from '@/stores/tabs'
 
@@ -16,11 +17,14 @@ export function useLogout() {
   const clearLocalSession = useAuthStore(state => state.clearLocalSession)
   const resetTabs = useTabsStore(state => state.resetTabs)
 
-  return ({ revokeOnServer = true }: LogoutOptions = {}) =>
-    endSession({
+  return ({ revokeOnServer = true }: LogoutOptions = {}) => {
+    // A lock set by this user must not greet the next one who signs in on this tab.
+    sessionStorage.removeItem(LOCK_SCREEN_KEY)
+    return endSession({
       clearAuthSession: revokeOnServer ? logout : clearLocalSession,
       queryClient,
       resetTabs,
       navigate
     })
+  }
 }

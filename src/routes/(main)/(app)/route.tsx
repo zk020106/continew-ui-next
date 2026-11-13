@@ -1,7 +1,6 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router'
 
-import { AppShell, loadAppShell } from '@/components/app-shell'
-import { PagePending } from '@/components/app-shell/page-pending'
+import { BaseLayout, loadBaseLayout, PagePending } from '@/layouts'
 import { QueryState } from '@/components/query-state'
 import { ensureMenuLoaded } from '@/hooks/use-menu'
 import { requireAuth } from '@/lib/auth-guard'
@@ -19,16 +18,16 @@ export const Route = createFileRoute('/(main)/(app)')({
     requireAuth({ location })
     requireRouteAccess(location.pathname, matches, routes)
   },
-  loader: loadAppShell,
+  loader: loadBaseLayout,
   component: AppLayout,
   notFoundComponent: NotFound
 })
 
 function AppLayout() {
   return (
-    <AppShell {...Route.useLoaderData()}>
+    <BaseLayout {...Route.useLoaderData()}>
       <AuthenticatedOutlet />
-    </AppShell>
+    </BaseLayout>
   )
 }
 

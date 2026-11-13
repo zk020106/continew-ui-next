@@ -20,18 +20,17 @@ import { NavMain } from './nav-main'
 import { SupportCarousel } from './support-carousel'
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { sidebarVariant, sidebarCollapsible, isSynced } = usePreferencesStore(
+  const { sidebarVariant, sidebarCollapsible } = usePreferencesStore(
     useShallow(s => ({
       sidebarVariant: s.values.sidebar_variant,
-      sidebarCollapsible: s.values.sidebar_collapsible,
-      isSynced: s.isSynced
+      sidebarCollapsible: s.values.sidebar_collapsible
     }))
   )
   const { groups } = useMenuGroups()
   const { title } = useSiteOptions()
 
-  const variant = isSynced ? sidebarVariant : props.variant
-  const collapsible = isSynced ? sidebarCollapsible : props.collapsible
+  const variant = sidebarVariant
+  const collapsible = sidebarCollapsible
 
   return (
     <Sidebar {...props} variant={variant} collapsible={collapsible}>

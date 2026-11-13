@@ -5,7 +5,9 @@ import { useEffect, useState } from 'react'
  * because media queries exclude the scrollbar while `innerWidth` includes it.
  */
 export function useBreakpoint(px: number, mode: 'min' | 'max') {
-  const [value, setValue] = useState<boolean | undefined>(undefined)
+  // SPA only: compute the first value synchronously, so the first frame already uses the right
+  // layout instead of rendering desktop on a phone and correcting itself one frame later.
+  const [value, setValue] = useState(() => (mode === 'min' ? window.innerWidth >= px : window.innerWidth < px))
 
   useEffect(() => {
     const query = mode === 'min' ? `(min-width: ${px}px)` : `(max-width: ${px - 1}px)`
@@ -18,5 +20,5 @@ export function useBreakpoint(px: number, mode: 'min' | 'max') {
     return () => mql.removeEventListener('change', onChange)
   }, [px, mode])
 
-  return !!value
+  return value
 }

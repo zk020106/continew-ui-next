@@ -151,7 +151,7 @@ export function HeaderTabs() {
       title: info.title,
       icon: info.icon,
       closable: pathname !== '/dashboard'
-    })
+    }, 5)
   }, [pathname, menuRoutes, addTab, router])
 
   // Drop tabs persisted from pages that no longer exist.
@@ -162,7 +162,7 @@ export function HeaderTabs() {
   }, [menuRoutes, pruneTabs, router])
 
   const handleCloseTab = (tab: TabItem) => {
-    const fallbackPath = closeTab(tab.path)
+    const fallbackPath = closeTab(tab.path, false)
     if (tab.path === pathname && fallbackPath) {
       void router.navigate({ href: fallbackPath })
     }
