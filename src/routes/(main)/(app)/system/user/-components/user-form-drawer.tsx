@@ -1,6 +1,6 @@
 import * as React from 'react'
 
-import { revalidateLogic, useForm } from '@tanstack/react-form'
+import { revalidateLogic } from '@tanstack/react-form'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { z } from 'zod'
 
@@ -8,18 +8,13 @@ import { Pen, User2 } from 'lucide-react'
 
 import { DeptTreeSelect } from '@/components/dept-tree-select'
 import { EntityDrawer } from '@/components/entity-drawer'
+import { FormItem, useAppForm } from '@/components/form'
 import { PasswordInput } from '@/components/password-input'
 import { QueryState } from '@/components/query-state'
-import { RequiredMark } from '@/components/required-mark'
 import { Button } from '@/components/ui/button'
 import { DrawerFooter } from '@/components/ui/drawer'
-import { Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
-import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { FieldGroup } from '@/components/ui/field'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Spinner } from '@/components/ui/spinner'
-import { Switch } from '@/components/ui/switch'
-import { Textarea } from '@/components/ui/textarea'
 import { toast } from '@/components/ui/toast'
 import { useFillFormOnce } from '@/hooks/use-fill-form-once'
 import { deptKeys, getDeptTree } from '@/lib/api/dept'
@@ -63,7 +58,8 @@ const baseSchema = z.object({
     .string()
     .max(255, '邮箱长度不能超过 255 个字符')
     .refine(value => value === '' || EMAIL_PATTERN.test(value), '邮箱格式不正确'),
-  gender: z.number().int().min(0).max(2),
+  // Kept as a string because the select only takes string values; `toUserReq` turns it back.
+  gender: z.enum(['0', '1', '2']),
   deptId: z.string().min(1, '请选择所属部门'),
   roleIds: z.array(z.string()).min(1, '请至少选择一个角色'),
   description: z.string().max(200, '描述长度不能超过 200 个字符'),
@@ -77,8 +73,6 @@ const createSchema = baseSchema.extend({
 
 type FormValues = z.infer<typeof baseSchema>
 
-type TextFieldName = 'nickname' | 'username' | 'phone' | 'email'
-
 /** Whether the schema rejects an empty value, which is what the marker tells the user. */
 const isRequired = (field: keyof FormValues) => !baseSchema.shape[field].safeParse('').success
 
@@ -88,14 +82,14 @@ const EMPTY_FORM: FormValues = {
   password: '',
   phone: '',
   email: '',
-  gender: 1,
+  gender: '1',
   deptId: '',
   roleIds: [],
   description: '',
   status: 1
 }
 
-/** `deptId` and `roleIds` become strings so they can drive the pickers. */
+/** `gender`, `deptId` and `roleIds` become strings so they can drive the pickers. */
 function toFormValues(user: UserDetailResp): FormValues {
   return {
     nickname: user.nickname,
@@ -104,7 +98,7 @@ function toFormValues(user: UserDetailResp): FormValues {
     password: '',
     phone: user.phone ?? '',
     email: user.email ?? '',
-    gender: user.gender,
+    gender: String(user.gender) as FormValues['gender'],
     deptId: user.deptId === null ? '' : String(user.deptId),
     roleIds: user.roleIds.map(String),
     description: user.description ?? '',
@@ -203,7 +197,7 @@ export function UserFormDrawer({ userId, open, onClose }: UserFormDrawerProps) {
   const toUserReq = (values: FormValues): UserReq => ({
     nickname: values.nickname.trim(),
     username: values.username.trim(),
-    gender: values.gender as UserGender,
+    gender: Number(values.gender) as UserGender,
     deptId: values.deptId,
     roleIds: values.roleIds,
     status: values.status as UserStatus,
@@ -221,7 +215,7 @@ export function UserFormDrawer({ userId, open, onClose }: UserFormDrawerProps) {
     toast.add({ title: message, type: 'success' })
   }
 
-  const form = useForm({
+  const form = useAppForm({
     defaultValues: EMPTY_FORM,
     validationLogic: revalidateLogic(),
     validators: { onDynamic: validationSchema },
@@ -268,38 +262,6 @@ export function UserFormDrawer({ userId, open, onClose }: UserFormDrawerProps) {
     })
   }
 
-  const renderTextField = (
-    name: TextFieldName,
-    label: string,
-    input: { maxLength: number; placeholder: string; autoComplete?: string }
-  ) => (
-    <form.Field name={name}>
-      {field => {
-        const invalid = field.state.meta.errors.length > 0
-
-        return (
-          <Field data-invalid={invalid}>
-            <FieldLabel>
-              {label}
-              {isRequired(name) && <RequiredMark />}
-            </FieldLabel>
-            <Input
-              name={name}
-              value={field.state.value}
-              onChange={event => field.handleChange(event.target.value)}
-              onBlur={field.handleBlur}
-              autoComplete={input.autoComplete}
-              maxLength={input.maxLength}
-              placeholder={input.placeholder}
-              aria-invalid={invalid}
-            />
-            <FieldError errors={field.state.meta.errors} />
-          </Field>
-        )
-      }}
-    </form.Field>
-  )
-
   useFillFormOnce({
     open,
     isEdit: !isCreate,
@@ -333,13 +295,28 @@ export function UserFormDrawer({ userId, open, onClose }: UserFormDrawerProps) {
         >
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
             <FieldGroup>
-              {renderTextField('nickname', '昵称', { maxLength: 30, placeholder: '请输入昵称' })}
+              <form.AppField name="nickname">
+                {field => (
+                  <field.TextInput
+                    label="昵称"
+                    required={isRequired('nickname')}
+                    maxLength={30}
+                    placeholder="请输入昵称"
+                  />
+                )}
+              </form.AppField>
 
-              {renderTextField('username', '用户名', {
-                maxLength: 64,
-                placeholder: '请输入用户名',
-                autoComplete: 'off'
-              })}
+              <form.AppField name="username">
+                {field => (
+                  <field.TextInput
+                    label="用户名"
+                    required={isRequired('username')}
+                    maxLength={64}
+                    placeholder="请输入用户名"
+                    autoComplete="off"
+                  />
+                )}
+              </form.AppField>
 
               {isCreate ? (
                 <form.Field name="password">
@@ -347,11 +324,14 @@ export function UserFormDrawer({ userId, open, onClose }: UserFormDrawerProps) {
                     const invalid = field.state.meta.errors.length > 0
 
                     return (
-                      <Field data-invalid={invalid}>
-                        <FieldLabel htmlFor="user-create-password">
-                          密码
-                          <RequiredMark />
-                        </FieldLabel>
+                      <FormItem
+                        id="user-create-password"
+                        label="密码"
+                        required
+                        // The rule hint gives way to the error, so the two never stack.
+                        description={invalid ? undefined : PASSWORD_HINT}
+                        errors={field.state.meta.errors}
+                      >
                         <PasswordInput
                           name="password"
                           id="user-create-password"
@@ -363,177 +343,97 @@ export function UserFormDrawer({ userId, open, onClose }: UserFormDrawerProps) {
                           autoComplete="new-password"
                           aria-invalid={invalid}
                         />
-                        {invalid ? (
-                          <FieldError errors={field.state.meta.errors} />
-                        ) : (
-                          <FieldDescription>{PASSWORD_HINT}</FieldDescription>
-                        )}
-                      </Field>
+                      </FormItem>
                     )
                   }}
                 </form.Field>
               ) : null}
 
-              {renderTextField('phone', '手机号码', {
-                maxLength: 14,
-                placeholder: '请输入手机号码',
-                autoComplete: 'off'
-              })}
+              <form.AppField name="phone">
+                {field => (
+                  <field.TextInput
+                    label="手机号码"
+                    type="tel"
+                    required={isRequired('phone')}
+                    maxLength={14}
+                    placeholder="请输入手机号码"
+                    autoComplete="off"
+                  />
+                )}
+              </form.AppField>
 
-              {renderTextField('email', '邮箱', {
-                maxLength: 255,
-                placeholder: '请输入邮箱地址',
-                autoComplete: 'off'
-              })}
+              <form.AppField name="email">
+                {field => (
+                  <field.TextInput
+                    label="邮箱"
+                    type="email"
+                    required={isRequired('email')}
+                    maxLength={255}
+                    placeholder="请输入邮箱地址"
+                    autoComplete="off"
+                  />
+                )}
+              </form.AppField>
 
-              <form.Field name="gender">
-                {field => {
-                  const invalid = field.state.meta.errors.length > 0
-
-                  return (
-                    <Field data-invalid={invalid}>
-                      <FieldLabel>性别</FieldLabel>
-                      <Select
-                        items={GENDER_ITEMS}
-                        value={String(field.state.value)}
-                        onValueChange={value => field.handleChange(value ? Number(value) : field.state.value)}
-                      >
-                        <SelectTrigger className="w-full" aria-invalid={invalid}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent align="start" alignItemWithTrigger={false}>
-                          <SelectGroup>
-                            {GENDER_ITEMS.map(item => (
-                              <SelectItem key={item.value} value={item.value}>
-                                {item.label}
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
-                      <FieldError errors={field.state.meta.errors} />
-                    </Field>
-                  )
-                }}
-              </form.Field>
+              <form.AppField name="gender">
+                {field => <field.SelectInput label="性别" options={GENDER_ITEMS} />}
+              </form.AppField>
 
               <form.Field name="deptId">
-                {field => {
-                  const invalid = field.state.meta.errors.length > 0
-
-                  return (
-                    <Field data-invalid={invalid}>
-                      <FieldLabel>所属部门{isRequired('deptId') && <RequiredMark />}</FieldLabel>
-                      <DeptTreeSelect
-                        data={depts.data}
-                        loading={depts.isPending}
-                        disabled={depts.isPending || depts.isError}
-                        value={field.state.value}
-                        onChange={field.handleChange}
-                        invalid={invalid}
-                        enabled={open}
+                {field => (
+                  <FormItem label="所属部门" required={isRequired('deptId')} errors={field.state.meta.errors}>
+                    <DeptTreeSelect
+                      data={depts.data}
+                      loading={depts.isPending}
+                      disabled={depts.isPending || depts.isError}
+                      value={field.state.value}
+                      onChange={field.handleChange}
+                      invalid={field.state.meta.errors.length > 0}
+                      enabled={open}
+                    />
+                    {depts.isError && (
+                      <QueryState
+                        state="error"
+                        title="部门加载失败"
+                        onRetry={() => void depts.refetch()}
+                        className="p-2"
                       />
-                      {depts.isError && (
-                        <QueryState
-                          state="error"
-                          title="部门加载失败"
-                          onRetry={() => void depts.refetch()}
-                          className="p-2"
-                        />
-                      )}
-                      <FieldError errors={field.state.meta.errors} />
-                    </Field>
-                  )
-                }}
+                    )}
+                  </FormItem>
+                )}
               </form.Field>
 
               <form.Field name="roleIds">
-                {field => {
-                  const invalid = field.state.meta.errors.length > 0
-
-                  return (
-                    <Field data-invalid={invalid}>
-                      <FieldLabel>角色{isRequired('roleIds') && <RequiredMark />}</FieldLabel>
-                      <UserRoleSelect
-                        value={field.state.value}
-                        onChange={field.handleChange}
-                        invalid={invalid}
-                        enabled={open}
-                      />
-                      <FieldError errors={field.state.meta.errors} />
-                    </Field>
-                  )
-                }}
+                {field => (
+                  <FormItem label="角色" required={isRequired('roleIds')} errors={field.state.meta.errors}>
+                    <UserRoleSelect
+                      value={field.state.value}
+                      onChange={field.handleChange}
+                      invalid={field.state.meta.errors.length > 0}
+                      enabled={open}
+                    />
+                  </FormItem>
+                )}
               </form.Field>
 
-              <form.Field name="description">
-                {field => {
-                  const invalid = field.state.meta.errors.length > 0
+              <form.AppField name="description">
+                {field => <field.TextareaInput label="描述" rows={3} maxLength={200} placeholder="请输入描述信息" />}
+              </form.AppField>
 
-                  return (
-                    <Field data-invalid={invalid}>
-                      <FieldLabel>描述</FieldLabel>
-                      <Textarea
-                        name="description"
-                        value={field.state.value}
-                        onChange={event => field.handleChange(event.target.value)}
-                        onBlur={field.handleBlur}
-                        rows={3}
-                        maxLength={200}
-                        placeholder="请输入描述信息"
-                        aria-invalid={invalid}
-                      />
-                      <FieldError errors={field.state.meta.errors} />
-                    </Field>
-                  )
-                }}
-              </form.Field>
-
-              <form.Field name="status">
-                {field => {
-                  const invalid = field.state.meta.errors.length > 0
-
-                  return (
-                    <Field orientation="horizontal" data-invalid={invalid}>
-                      <FieldContent>
-                        <FieldLabel>状态</FieldLabel>
-                        <FieldDescription>
-                          {field.state.value === 1 ? '启用后该用户可以登录' : '禁用后该用户无法登录'}
-                        </FieldDescription>
-                      </FieldContent>
-                      <Switch
-                        checked={field.state.value === 1}
-                        onCheckedChange={checked => field.handleChange(checked ? 1 : 2)}
-                        aria-invalid={invalid}
-                      />
-                    </Field>
-                  )
-                }}
-              </form.Field>
+              <form.AppField name="status">
+                {field => (
+                  <field.SwitchInput
+                    label="状态"
+                    description={field.state.value === 1 ? '启用后该用户可以登录' : '禁用后该用户无法登录'}
+                  />
+                )}
+              </form.AppField>
             </FieldGroup>
           </div>
 
-          <DrawerFooter>
-            <form.Subscribe selector={state => state.isSubmitting}>
-              {isSubmitting => (
-                <>
-                  <Button type="button" variant="outline" disabled={isSubmitting} onClick={onClose}>
-                    取消
-                  </Button>
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? (
-                      <>
-                        <Spinner />
-                        保存中
-                      </>
-                    ) : (
-                      '保存'
-                    )}
-                  </Button>
-                </>
-              )}
-            </form.Subscribe>
-          </DrawerFooter>
+          <form.AppForm>
+            <form.FormFooter onCancel={onClose} />
+          </form.AppForm>
         </form>
       ) : detail.isError ? (
         <QueryState state="error" className="p-6" onRetry={() => void detail.refetch()} />
